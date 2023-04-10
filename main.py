@@ -7,7 +7,7 @@ import os
 os.makedirs("images", exist_ok=True)
 
 
-def get_image_from_url(url):
+def get_image_from_url(url, matched_url):
     URL = url  # Replace this with the website's URL
     getURL = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
     soup = BeautifulSoup(getURL.text, "html.parser")
@@ -16,11 +16,13 @@ def get_image_from_url(url):
     resolvedURLs = []
     for image in images:
         src = image.get("src")
-        resolvedURLs.append(requests.compat.urljoin(URL, src))
+        resolvedURLs.append(requests.compat.urljoin(URL, src))  # type: ignore
 
     for image in resolvedURLs:
         webs = requests.get(image)
-        open("images/" + image.split("/")[-1], "wb").write(webs.content)
+        # make sure matched_url directory exists
+        os.makedirs(f"images/{matched_url}", exist_ok=True)
+        open(f"images/{matched_url}/" + image.split("/")[-1], "wb").write(webs.content)
 
 
 def get_urls_from_wayback(url):
@@ -61,7 +63,8 @@ if __name__ == "__main__":
     all_urls = [url for url in all_urls if url not in downloaded_urls]
     for url in all_urls:
         try:
-            get_image_from_url(url)
+            matched_url = [tu for tu in target_urls if tu in url][0]
+            get_image_from_url(url, matched_url)
             print(f"Downloaded {url}")
         except Exception as e:
             print(f"Error: {e}")
