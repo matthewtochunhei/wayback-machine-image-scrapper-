@@ -2,3 +2,4 @@ images/
 venv/
 downloaded.txt
 .env
+target_urls.development.txt

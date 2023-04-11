@@ -2,6 +2,7 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import os
+from multiprocessing import Pool
 
 # create image folder
 os.makedirs("images", exist_ok=True)
@@ -43,8 +44,31 @@ def get_urls_from_wayback(url):
     return final_url_list
 
 
+target_urls = []
+if os.path.exists("target_urls.development.txt"):
+    my_file = open("target_urls.development.txt", "r")
+    target_urls = my_file.read().splitlines()
+elif os.path.exists("target_urls.txt"):
+    my_file = open("target_urls.txt", "r")
+    target_urls = my_file.read().splitlines()
+else:
+    print("No target urls file found")
+
+
+def download_images(url):
+    try:
+        matched_url = [tu for tu in target_urls if tu in url][0]
+        get_image_from_url(url, matched_url)
+        print(f"Downloaded {url}")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        # append downloaded url to file
+        with open("downloaded.txt", "a") as f:
+            f.write(url + "\n")
+
+
 if __name__ == "__main__":
-    target_urls = os.environ.get("TARGET_URLS", "").split(",")
     all_urls = []
     for tu in target_urls:
         url = f"https://web.archive.org/cdx/search/cdx?url={tu}/*&collapse=digest&output=json"
@@ -61,14 +85,7 @@ if __name__ == "__main__":
     downloaded_urls = [url.strip() for url in downloaded_urls]
     # remove downloaded urls
     all_urls = [url for url in all_urls if url not in downloaded_urls]
-    for url in all_urls:
-        try:
-            matched_url = [tu for tu in target_urls if tu in url][0]
-            get_image_from_url(url, matched_url)
-            print(f"Downloaded {url}")
-        except Exception as e:
-            print(f"Error: {e}")
-        finally:
-            # append downloaded url to file
-            with open("downloaded.txt", "a") as f:
-                f.write(url + "\n")
+    # for url in all_urls:
+    # download images using multiprocessing
+    with Pool(10) as p:
+        p.map(download_images, all_urls)
